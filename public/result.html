@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Result - QuizMaster</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .result-card {
+            max-width: 600px;
+            margin: 5rem auto;
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .score-circle {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            background: var(--primary-light);
+            border: 4px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 2rem auto;
+            font-size: 3rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .confetti {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="glass result-card fade-in">
+            <span class="badge">Quiz Completed</span>
+            <h1 style="margin-top: 1rem;">Excellent Work!</h1>
+            <p style="color: var(--text-muted);">You've successfully completed the quiz. Here are your stats:</p>
+
+            <div class="score-circle" id="score-display">0/0</div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
+                <div class="glass" style="padding: 1.5rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">Points Earned</p>
+                    <h3 id="points-earned">0</h3>
+                </div>
+                <div class="glass" style="padding: 1.5rem;">
+                    <p style="font-size: 0.875rem; color: var(--text-muted);">Accuracy</p>
+                    <h3 id="accuracy">0%</h3>
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem; display: flex; gap: 1rem; justify-content: center;">
+                <a href="/dashboard.html" class="btn btn-primary">Back to Dashboard</a>
+                <a href="/" class="btn btn-outline">Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        checkAuth();
+        const urlParams = new URLSearchParams(window.location.search);
+        const resultId = urlParams.get('id');
+
+        async function loadResult() {
+            // Since we don't have a direct get result endpoint, we'll get from user profile for now or add one.
+            // Let's assume we can get it from the user history or just pass data via session.
+            // For simplicity, let's fetch profile and find the result.
+            const data = await api.get('/user/profile');
+            const result = data.history.find(h => h._id === resultId);
+
+            if (result) {
+                document.getElementById('score-display').innerText = `${result.numCorrectAnswers}/${result.totalQuestions}`;
+                document.getElementById('points-earned').innerText = result.score;
+                document.getElementById('accuracy').innerText = `${Math.round((result.numCorrectAnswers / result.totalQuestions) * 100)}%`;
+            } else {
+                alert('Result not found');
+            }
+        }
+
+        loadResult();
+    </script>
+</body>
+</html>

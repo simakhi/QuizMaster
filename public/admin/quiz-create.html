@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Quiz - QuizMaster Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: #f8fafc;
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .main-content {
+            padding: 3rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-nav a {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .sidebar-nav a:hover, .sidebar-nav a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .question-box {
+            padding: 2rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--glass-border);
+            border-radius: 1.5rem;
+        }
+
+        .option-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="brand">QuizMaster Admin</div>
+            <ul class="sidebar-nav">
+                <li><a href="/admin/dashboard.html">Dashboard</a></li>
+                <li><a href="/admin/users.html">User Management</a></li>
+                <li><a href="/admin/quiz-list.html">Quizzes</a></li>
+                <li><a href="/admin/quiz-create.html" class="active">Create Quiz</a></li>
+                <li style="margin-top: 2rem;"><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content fade-in">
+            <h1 style="margin-bottom: 2rem;">Create New Quiz</h1>
+            
+            <form id="quiz-form">
+                <div class="glass" style="padding: 2rem; margin-bottom: 2rem;">
+                    <div class="form-group">
+                        <label>Quiz Title</label>
+                        <input type="text" id="title" class="form-input" placeholder="Enter quiz title" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Category</label>
+                        <input type="text" id="category" class="form-input" placeholder="e.g. Science, Tech, History" required>
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="form-group" style="flex:1;">
+                            <label>Points per Question</label>
+                            <input type="number" id="pointPerQuestion" class="form-input" value="10" required>
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>Number of Questions</label>
+                            <input type="number" id="numQuestions" class="form-input" value="5" min="1" max="20" required>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline" style="margin-top: 1rem;" onclick="generateQuestionInputs()">Confirm Settings & Generate Questions</button>
+                </div>
+
+                <div id="questions-container">
+                    <!-- Dynamic question inputs go here -->
+                </div>
+
+                <div id="form-actions" style="display:none; margin-top: 2rem; padding-bottom: 4rem;">
+                    <button type="submit" class="btn btn-primary" style="padding: 1rem 3rem;">Publish Quiz</button>
+                </div>
+            </form>
+        </main>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        if (!isAdmin()) window.location.href = '/login.html';
+
+        function generateQuestionInputs() {
+            const num = parseInt(document.getElementById('numQuestions').value);
+            const container = document.getElementById('questions-container');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < num; i++) {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'glass question-box fade-in';
+                questionDiv.innerHTML = `
+                    <h3 style="margin-bottom: 1.5rem; color: var(--primary);">Question ${i + 1}</h3>
+                    <div class="form-group">
+                        <label>Question Text</label>
+                        <input type="text" name="q-${i}-text" class="form-input" placeholder="What is the capital of..." required>
+                    </div>
+                    <div class="option-grid">
+                        <div class="form-group">
+                            <label>Option 1</label>
+                            <input type="text" name="q-${i}-opt-0" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Option 2</label>
+                            <input type="text" name="q-${i}-opt-1" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Option 3</label>
+                            <input type="text" name="q-${i}-opt-2" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Option 4</label>
+                            <input type="text" name="q-${i}-opt-3" class="form-input" required>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top: 1rem;">
+                        <label>Correct Option Index (0-3)</label>
+                        <select name="q-${i}-correct" class="form-input" style="background: #ffffff;">
+                            <option value="0">Option 1</option>
+                            <option value="1">Option 2</option>
+                            <option value="2">Option 3</option>
+                            <option value="3">Option 4</option>
+                        </select>
+                    </div>
+                `;
+                container.appendChild(questionDiv);
+            }
+            document.getElementById('form-actions').style.display = 'block';
+        }
+
+        document.getElementById('quiz-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const num = parseInt(document.getElementById('numQuestions').value);
+            const questions = [];
+
+            for (let i = 0; i < num; i++) {
+                const questionText = document.querySelector(`[name="q-${i}-text"]`).value;
+                const options = [
+                    document.querySelector(`[name="q-${i}-opt-0"]`).value,
+                    document.querySelector(`[name="q-${i}-opt-1"]`).value,
+                    document.querySelector(`[name="q-${i}-opt-2"]`).value,
+                    document.querySelector(`[name="q-${i}-opt-3"]`).value
+                ];
+                const correctOptionIndex = parseInt(document.querySelector(`[name="q-${i}-correct"]`).value);
+
+                questions.push({ question: questionText, options, correctOptionIndex });
+            }
+
+            const quizData = {
+                title: document.getElementById('title').value,
+                category: document.getElementById('category').value,
+                numQuestions: num,
+                pointPerQuestion: parseInt(document.getElementById('pointPerQuestion').value),
+                questions
+            };
+
+            const res = await api.post('/quiz/create', quizData);
+            if (res._id) {
+                alert('Quiz created successfully!');
+                window.location.href = '/admin/dashboard.html';
+            } else {
+                alert(res.message || 'Error creating quiz');
+            }
+        });
+    </script>
+</body>
+</html>

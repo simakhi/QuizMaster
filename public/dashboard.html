@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard - QuizMaster</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .profile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3rem;
+            padding: 2rem;
+        }
+
+        .stat-card {
+            padding: 2rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="brand" onclick="window.location.href='/'">QuizMaster</div>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="#" onclick="logout()" class="btn btn-outline" style="padding: 0.5rem 1rem;">Logout</a></li>
+        </ul>
+    </nav>
+
+    <div class="container fade-in">
+        <div class="glass profile-header">
+            <div>
+                <h1 id="user-name">Welcome Back, User</h1>
+                <p id="user-phone">Phone: +91 0000000000</p>
+                <div style="margin-top: 1.5rem;">
+                    <a href="#history" class="btn btn-outline">View History</a>
+                    <button onclick="document.getElementById('password-modal').style.display='flex'" class="btn btn-outline" style="margin-left: 0.5rem;">Edit Password</button>
+                </div>
+            </div>
+            <div class="stat-card glass" style="min-width: 200px;">
+                <p>Total Points</p>
+                <div class="stat-value" id="total-points">0</div>
+            </div>
+        </div>
+
+        <h2 style="margin-bottom: 1.5rem;">Available Quizzes</h2>
+        <div class="category-grid" id="quiz-list-container">
+            <!-- Quizzes populated by JS -->
+        </div>
+
+        <h2 style="margin: 4rem 0 1.5rem;" id="history">Quiz History</h2>
+        <div class="glass" style="overflow-x: auto; padding: 1.5rem; border-radius: 1.5rem;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead>
+                    <tr style="color: var(--text-muted); border-bottom: 1px solid var(--glass-border);">
+                        <th style="padding: 1rem;">Quiz</th>
+                        <th style="padding: 1rem;">Date</th>
+                        <th style="padding: 1rem;">Score</th>
+                        <th style="padding: 1rem;">Points</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body">
+                    <!-- History populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Password modal -->
+    <div id="password-modal" class="auth-container" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:100; background:rgba(255,255,255,0.8); backdrop-filter:blur(5px);">
+        <div class="glass auth-card">
+            <h2 style="margin-bottom: 2rem;">Update Password</h2>
+            <form id="password-form">
+                <div class="form-group">
+                    <label>New Password</label>
+                    <input type="password" id="new-password" class="form-input" required>
+                </div>
+                <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Update</button>
+                    <button type="button" onclick="document.getElementById('password-modal').style.display='none'" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        const user = checkAuth();
+        document.getElementById('user-name').innerText = `Welcome Back, ${user.name}`;
+        document.getElementById('user-phone').innerText = `Phone: ${user.phone}`;
+
+        async function loadDashboard() {
+            const data = await api.get('/user/profile');
+            const totalPoints = data.history.reduce((acc, curr) => acc + curr.score, 0);
+            document.getElementById('total-points').innerText = totalPoints;
+
+            // Load Quizzes
+            const quizzes = await api.get('/quiz/all');
+            const container = document.getElementById('quiz-list-container');
+            container.innerHTML = quizzes.map(q => `
+                <div class="glass quiz-card fade-in" onclick="window.location.href='/play.html?id=${q._id}'">
+                    <span class="badge" style="margin-bottom: 0.5rem;">${q.category}</span>
+                    <h3>${q.title}</h3>
+                    <p style="color: var(--text-muted); font-size: 0.875rem; margin-top: 0.5rem;">
+                        ${q.numQuestions} Questions • ${q.pointPerQuestion} Point per question
+                    </p>
+                </div>
+            `).join('');
+
+            // Load History
+            const historyBody = document.getElementById('history-table-body');
+            historyBody.innerHTML = data.history.map(h => `
+                <tr style="border-bottom: 1px solid var(--glass-border);">
+                    <td style="padding: 1rem;">${h.quiz ? h.quiz.title : 'Deleted Quiz'}</td>
+                    <td style="padding: 1rem;">${new Date(h.date).toLocaleDateString()}</td>
+                    <td style="padding: 1rem;">${h.numCorrectAnswers}/${h.totalQuestions}</td>
+                    <td style="padding: 1rem; font-weight: 700; color: var(--primary);">${h.score}</td>
+                </tr>
+            `).join('');
+        }
+
+        document.getElementById('password-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('new-password').value;
+            const res = await api.put('/user/update-password', { password });
+            if (res.message) {
+                alert(res.message);
+                document.getElementById('password-modal').style.display = 'none';
+            }
+        });
+
+        loadDashboard();
+    </script>
+</body>
+</html>

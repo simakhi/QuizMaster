@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management - QuizMaster Admin</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .admin-layout {
+            display: grid;
+            grid-template-columns: 260px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: #f8fafc;
+            border-right: 1px solid var(--glass-border);
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .main-content {
+            padding: 3rem;
+        }
+
+        .sidebar-nav {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-nav a {
+            padding: 1rem;
+            border-radius: 0.75rem;
+            color: var(--text-muted);
+            text-decoration: none;
+            transition: var(--transition);
+        }
+
+        .sidebar-nav a:hover, .sidebar-nav a.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 2rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        th {
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            letter-spacing: 1px;
+        }
+    </style>
+</head>
+<body>
+    <div class="admin-layout">
+        <aside class="sidebar">
+            <div class="brand">QuizMaster Admin</div>
+            <ul class="sidebar-nav">
+                <li><a href="/admin/dashboard.html">Dashboard</a></li>
+                <li><a href="/admin/users.html" class="active">User Management</a></li>
+                <li><a href="/admin/quiz-list.html">Quizzes</a></li>
+                <li><a href="/admin/quiz-create.html">Create Quiz</a></li>
+                <li style="margin-top: 2rem;"><a href="#" onclick="logout()">Logout</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content fade-in">
+            <h1 style="margin-bottom: 2rem;">User Management</h1>
+            <div class="glass" style="padding: 1rem; border-radius: 1.5rem; overflow-x: auto;">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Phone</th>
+                            <th>Joined</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="user-table-body">
+                        <!-- Users populated by JS -->
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal" class="auth-container" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:100; background:rgba(255,255,255,0.8); backdrop-filter:blur(5px);">
+        <div class="glass auth-card">
+            <h2 style="margin-bottom: 2rem;">Edit User</h2>
+            <form id="edit-form">
+                <input type="hidden" id="edit-user-id">
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" id="edit-name" class="form-input" required>
+                </div>
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label>Phone Number</label>
+                    <input type="tel" id="edit-phone" class="form-input" required>
+                </div>
+                <div style="display: flex; gap: 1rem;">
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">Save Changes</button>
+                    <button type="button" onclick="document.getElementById('edit-modal').style.display='none'" class="btn btn-outline" style="flex: 1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="../js/api.js"></script>
+    <script>
+        if (!isAdmin()) window.location.href = '/login.html';
+
+        async function loadUsers() {
+            const users = await api.get('/user/all');
+            const tbody = document.getElementById('user-table-body');
+            tbody.innerHTML = users.map(u => `
+                <tr>
+                    <td style="font-weight: 700;">${u.name}</td>
+                    <td>${u.phone}</td>
+                    <td>${new Date(u.createdAt).toLocaleDateString()}</td>
+                    <td>
+                        <button onclick="openEditModal('${u._id}', '${u.name}', '${u.phone}')" class="btn btn-outline" style="padding: 0.5rem 1rem; font-size: 0.875rem;">Edit</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openEditModal(id, name, phone) {
+            document.getElementById('edit-user-id').value = id;
+            document.getElementById('edit-name').value = name;
+            document.getElementById('edit-phone').value = phone;
+            document.getElementById('edit-modal').style.display = 'flex';
+        }
+
+        document.getElementById('edit-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('edit-user-id').value;
+            const name = document.getElementById('edit-name').value;
+            const phone = document.getElementById('edit-phone').value;
+
+            const res = await api.put(`/user/edit/${id}`, { name, phone });
+            if (res._id) {
+                alert('User updated successfully');
+                document.getElementById('edit-modal').style.display = 'none';
+                loadUsers();
+            } else {
+                alert(res.message || 'Update failed');
+            }
+        });
+
+        loadUsers();
+    </script>
+</body>
+</html>

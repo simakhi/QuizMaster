@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuizMaster - The Ultimate Quiz Platform</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .home-hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+    </style>
+</head>
+<body>
+    <nav class="fade-in">
+        <div class="brand" onclick="window.location.href='/'">QuizMaster</div>
+        <ul class="nav-links">
+            <li><a href="/">Home</a></li>
+            <li><a href="/login.html" id="nav-login">Login</a></li>
+               <li><a href="/register.html" class="btn btn-primary" id="nav-register">Get Started</a></li>
+            <li id="nav-user" style="display:none;"><a href="/dashboard.html">Dashboard</a></li>
+            <li id="nav-admin" style="display:none;"><a href="/admin/dashboard.html" class="btn btn-outline" style="padding: 0.5rem 1rem;">Admin Panel</a></li>
+        </ul>
+    </nav>
+
+    <main class="home-hero hero fade-in">
+        <span class="badge">Next Gen Learning</span>
+        <h1>Master Your Knowledge <br> with <span style="color:var(--primary)">QuizMaster</span></h1>
+        <p>A fun, interactive, and competitive platform to test your skills across various categories. Join thousands of learners today.</p>
+        <div class="cta-group" style="display: flex; gap: 1rem;">
+            <a href="/login.html" class="btn btn-primary">Start Quiz Now</a>
+            <a href="/register.html" class="btn btn-outline">Create Account</a>
+        </div>
+    </main>
+
+    <div class="container fade-in" style="margin-top: -5rem;">
+        <div class="grid">
+            <div class="glass quiz-card">
+                <h3 style="margin-bottom: 1rem; color: var(--primary);">Real-time Stats</h3>
+                <p style="color: var(--text-muted);">Track your progress with detailed analytics and point history.</p>
+            </div>
+            <div class="glass quiz-card">
+                <h3 style="margin-bottom: 1rem; color: var(--secondary);">Diverse Categories</h3>
+                <p style="color: var(--text-muted);">From Tech to Science, we have quizzes for every interest area.</p>
+            </div>
+            <div class="glass quiz-card">
+                <h3 style="margin-bottom: 1rem; color: var(--accent);">Admin Dashboard</h3>
+                <p style="color: var(--text-muted);">Easily manage students and create custom quizzes with ease.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p class="footer-text">© 2026 QuizMaster. All rights reserved. Built for excellence.</p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script>
+        // Simple UI check
+        const user = JSON.parse(localStorage.getItem('user'));
+        if (user) {
+            document.getElementById('nav-login').style.display = 'none';
+            document.getElementById('nav-register').style.display = 'none';
+            document.getElementById('nav-user').style.display = 'block';
+            if (user.role === 'admin') {
+                document.getElementById('nav-admin').style.display = 'block';
+            }
+        }
+    </script>
+</body>
+</html>

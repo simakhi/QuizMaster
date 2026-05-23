@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playing Quiz - QuizMaster</title>
+    <link rel="stylesheet" href="css/style.css">
+    <style>
+        .quiz-container {
+            max-width: 800px;
+            margin: 4rem auto;
+            padding: 2rem;
+        }
+
+        .question-card {
+            animation: fadeIn 0.5s ease;
+        }
+
+        .option-button {
+            width: 100%;
+            padding: 1.25rem;
+            margin-bottom: 1rem;
+            text-align: left;
+            background: #ffffff;
+            border: 1px solid var(--glass-border);
+            border-radius: 1rem;
+            color: var(--text-main);
+            cursor: pointer;
+            transition: var(--transition);
+            font-size: 1rem;
+        }
+
+        .option-button:hover:not(:disabled) {
+            background: var(--primary-light);
+            border-color: var(--primary);
+        }
+
+        .option-button.selected {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--glass-border);
+            border-radius: 3px;
+            margin: 1.5rem 0;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--primary);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .timer-badge {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            width: 80px;
+            height: 80px;
+            background: #ffffff;
+            border: 2px solid var(--primary);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+    <div class="timer-badge" id="timer">00</div>
+
+    <div class="container">
+        <div class="glass quiz-container fade-in" id="quiz-ui">
+            <div id="quiz-header">
+                <span id="quiz-category" class="badge">Category</span>
+                <h2 id="quiz-title" style="margin: 0.5rem 0 1rem;">Quiz Title</h2>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progress"></div>
+                </div>
+                <p style="color:var(--text-muted); font-size: 0.875rem;">Question <span id="current-q-index">1</span> of <span id="total-q-count">10</span></p>
+            </div>
+
+            <div id="question-area" class="question-card" style="margin-top: 2.5rem;">
+                <h3 id="question-text" style="margin-bottom: 2rem; font-size: 1.5rem;">Question text goes here?</h3>
+                <div id="options-container">
+                    <!-- Options populated by JS -->
+                </div>
+            </div>
+
+            <div style="margin-top: 3rem; display: flex; justify-content: flex-end;">
+                <button id="next-btn" class="btn btn-primary" onclick="handleNext()" disabled>Next Question</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script>
+        checkAuth();
+        const urlParams = new URLSearchParams(window.location.search);
+        const quizId = urlParams.get('id');
+
+        let quizData = null;
+        let currentIdx = 0;
+        let selectedOption = null;
+        let answers = [];
+        let timer = 30;
+        let timerInterval;
+
+        async function initQuiz() {
+            quizData = await api.get(`/quiz/${quizId}`);
+            if (!quizData) return alert('Quiz not found');
+
+            document.getElementById('quiz-title').innerText = quizData.title;
+            document.getElementById('quiz-category').innerText = quizData.category;
+            document.getElementById('total-q-count').innerText = quizData.questions.length;
+            
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const q = quizData.questions[currentIdx];
+            document.getElementById('current-q-index').innerText = currentIdx + 1;
+            document.getElementById('question-text').innerText = q.question;
+            document.getElementById('progress').style.width = `${((currentIdx) / quizData.questions.length) * 100}%`;
+
+            const optionsContainer = document.getElementById('options-container');
+            optionsContainer.innerHTML = q.options.map((opt, i) => `
+                <button class="option-button" onclick="selectOption(${i})">${opt}</button>
+            `).join('');
+
+            document.getElementById('next-btn').disabled = true;
+            document.getElementById('next-btn').innerText = (currentIdx === quizData.questions.length - 1) ? 'Submit Quiz' : 'Next Question';
+            
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval);
+            timer = 30;
+            document.getElementById('timer').innerText = timer;
+            timerInterval = setInterval(() => {
+                timer--;
+                document.getElementById('timer').innerText = timer;
+                if (timer <= 0) {
+                    clearInterval(timerInterval);
+                    handleNext(); // Auto-skip on time finish
+                }
+            }, 1000);
+        }
+
+        function selectOption(index) {
+            selectedOption = index;
+            const buttons = document.querySelectorAll('.option-button');
+            buttons.forEach((btn, i) => {
+                btn.classList.toggle('selected', i === index);
+            });
+            document.getElementById('next-btn').disabled = false;
+        }
+
+        async function handleNext() {
+            clearInterval(timerInterval);
+            answers.push(selectedOption);
+            selectedOption = null;
+
+            if (currentIdx < quizData.questions.length - 1) {
+                currentIdx++;
+                showQuestion();
+            } else {
+                submitQuiz();
+            }
+        }
+
+        async function submitQuiz() {
+            let correctCount = 0;
+            quizData.questions.forEach((q, i) => {
+                if (answers[i] === q.correctOptionIndex) correctCount++;
+            });
+
+            const score = correctCount * quizData.pointPerQuestion;
+            const totalPoints = quizData.numQuestions * quizData.pointPerQuestion;
+
+            const res = await api.post('/user/submit-quiz', {
+                quizId: quizData._id,
+                score: score,
+                totalPoints: totalPoints,
+                numCorrectAnswers: correctCount,
+                totalQuestions: quizData.numQuestions
+            });
+
+            if (res._id) {
+                window.location.href = `/result.html?id=${res._id}`;
+            }
+        }
+
+        initQuiz();
+    </script>
+</body>
+</html>
